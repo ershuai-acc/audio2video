@@ -1,0 +1,2125 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>音频转视频生成器</title>
+  <link rel="stylesheet" href="https://unpkg.com/cropperjs@1.6.2/dist/cropper.min.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+    }
+    
+    h1 {
+      color: white;
+      font-size: 2rem;
+      text-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    }
+    
+    .history-btn {
+      padding: 10px 20px;
+      background: rgba(255,255,255,0.2);
+      color: white;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    
+    .history-btn:hover {
+      background: rgba(255,255,255,0.3);
+      border-color: rgba(255,255,255,0.5);
+    }
+    
+    .history-badge {
+      background: white;
+      color: #667eea;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: bold;
+    }
+    
+    .steps-indicator {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 30px;
+      gap: 10px;
+    }
+    
+    .step-dot {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .step-dot .number {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.3);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      transition: all 0.3s;
+    }
+    
+    .step-dot.active .number {
+      background: white;
+      color: #667eea;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+    
+    .step-dot.completed .number {
+      background: #4CAF50;
+      color: white;
+    }
+    
+    .step-dot .label {
+      color: rgba(255,255,255,0.7);
+      font-size: 14px;
+    }
+    
+    .step-dot.active .label {
+      color: white;
+      font-weight: 500;
+    }
+    
+    .step-line {
+      width: 50px;
+      height: 2px;
+      background: rgba(255,255,255,0.3);
+      margin: 0 5px;
+      align-self: center;
+    }
+    
+    .card {
+      background: white;
+      border-radius: 20px;
+      padding: 30px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+      display: none;
+    }
+    
+    .card.active {
+      display: block;
+      animation: slideIn 0.3s ease;
+    }
+    
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    .card-title {
+      font-size: 1.5rem;
+      color: #333;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .card-title .icon {
+      font-size: 1.8rem;
+    }
+    
+    .upload-area {
+      border: 3px dashed #ddd;
+      border-radius: 15px;
+      padding: 40px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s;
+      background: #fafafa;
+    }
+    
+    .upload-area:hover {
+      border-color: #667eea;
+      background: #f0f4ff;
+    }
+    
+    .upload-area.dragover {
+      border-color: #667eea;
+      background: #e8edff;
+    }
+    
+    .upload-area .icon {
+      font-size: 3rem;
+      margin-bottom: 15px;
+    }
+    
+    .upload-area p {
+      color: #666;
+      margin-bottom: 10px;
+    }
+    
+    .upload-area .hint {
+      font-size: 12px;
+      color: #999;
+    }
+    
+    .file-info {
+      background: #f8f9fa;
+      border-radius: 10px;
+      padding: 15px;
+      margin-top: 20px;
+      display: none;
+    }
+    
+    .file-info.show {
+      display: block;
+    }
+    
+    .file-info .filename {
+      font-weight: 500;
+      color: #333;
+      margin-bottom: 5px;
+    }
+    
+    .file-info .meta {
+      font-size: 13px;
+      color: #666;
+    }
+    
+    .form-group {
+      margin-bottom: 20px;
+    }
+    
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+      color: #333;
+    }
+    
+    .form-group input,
+    .form-group textarea {
+      width: 100%;
+      padding: 12px 15px;
+      border: 2px solid #e0e0e0;
+      border-radius: 10px;
+      font-size: 14px;
+      transition: all 0.3s;
+    }
+    
+    .form-group input:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+    
+    .form-group textarea {
+      resize: vertical;
+      min-height: 100px;
+    }
+    
+    .preview-area {
+      margin-top: 20px;
+      text-align: center;
+    }
+    
+    .preview-area img {
+      max-width: 250px;
+      border-radius: 15px;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+    }
+    
+    .preview-area video {
+      max-width: 100%;
+      max-height: 400px;
+      border-radius: 15px;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+    }
+    
+    .option-group {
+      display: flex;
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+    
+    .option-item {
+      flex: 1;
+      padding: 15px;
+      border: 2px solid #e0e0e0;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.3s;
+      text-align: center;
+    }
+    
+    .option-item:hover {
+      border-color: #667eea;
+    }
+    
+    .option-item.selected {
+      border-color: #667eea;
+      background: #f0f4ff;
+    }
+    
+    .option-item .icon {
+      font-size: 2rem;
+      margin-bottom: 8px;
+    }
+    
+    .option-item .title {
+      font-weight: 500;
+      color: #333;
+    }
+    
+    .option-item .desc {
+      font-size: 12px;
+      color: #888;
+      margin-top: 5px;
+    }
+    
+    .btn {
+      padding: 14px 30px;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+    }
+    
+    .btn-primary:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+    
+    .btn-secondary {
+      background: #f0f0f0;
+      color: #333;
+    }
+    
+    .btn-secondary:hover {
+      background: #e0e0e0;
+    }
+    
+    .btn-group {
+      display: flex;
+      gap: 10px;
+      margin-top: 25px;
+    }
+    
+    .progress-container {
+      margin-top: 20px;
+      display: none;
+    }
+    
+    .progress-container.show {
+      display: block;
+    }
+    
+    .progress-bar {
+      height: 8px;
+      background: #e0e0e0;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    
+    .progress-bar .fill {
+      height: 100%;
+      background: linear-gradient(90deg, #667eea, #764ba2);
+      width: 0%;
+      transition: width 0.3s;
+      animation: progress-pulse 1.5s infinite;
+    }
+    
+    @keyframes progress-pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+    
+    .progress-text {
+      text-align: center;
+      margin-top: 10px;
+      color: #666;
+      font-size: 14px;
+    }
+    
+    .success-message {
+      text-align: center;
+      padding: 30px;
+    }
+    
+    .success-message .icon {
+      font-size: 4rem;
+      margin-bottom: 15px;
+    }
+    
+    .success-message h3 {
+      color: #333;
+      margin-bottom: 10px;
+    }
+    
+    .success-message p {
+      color: #666;
+    }
+    
+    .download-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 20px;
+      padding: 12px 24px;
+      background: #4CAF50;
+      color: white;
+      text-decoration: none;
+      border-radius: 10px;
+      font-weight: 500;
+      transition: all 0.3s;
+    }
+    
+    .download-btn:hover {
+      background: #43a047;
+      transform: translateY(-2px);
+    }
+    
+    .new-task-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 15px;
+      margin-left: 10px;
+      padding: 12px 24px;
+      background: #667eea;
+      color: white;
+      text-decoration: none;
+      border: none;
+      border-radius: 10px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    
+    .new-task-btn:hover {
+      background: #5a6fd6;
+      transform: translateY(-2px);
+    }
+    
+    #audioInput {
+      display: none;
+    }
+    
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    
+    .modal-overlay.show {
+      display: flex;
+    }
+    
+    .modal {
+      background: white;
+      border-radius: 20px;
+      padding: 30px;
+      max-width: 600px;
+      width: 90%;
+      max-height: 80vh;
+      overflow-y: auto;
+      animation: slideIn 0.3s ease;
+    }
+    
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    
+    .modal-header h2 {
+      font-size: 1.5rem;
+      color: #333;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: #999;
+      transition: color 0.3s;
+    }
+    
+    .modal-close:hover {
+      color: #333;
+    }
+    
+    .history-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    
+    .history-item {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      padding: 15px;
+      background: #f8f9fa;
+      border-radius: 12px;
+      transition: all 0.3s;
+    }
+    
+    .history-item:hover {
+      background: #f0f4ff;
+    }
+    
+    .history-item .thumbnail {
+      width: 60px;
+      height: 107px;
+      border-radius: 8px;
+      object-fit: cover;
+      background: #ddd;
+    }
+    
+    .history-item .info {
+      flex: 1;
+    }
+    
+    .history-item .title {
+      font-weight: 500;
+      color: #333;
+      margin-bottom: 5px;
+    }
+    
+    .history-item .meta {
+      font-size: 12px;
+      color: #888;
+    }
+    
+    .history-item .actions {
+      display: flex;
+      gap: 8px;
+    }
+    
+    .history-item .action-btn {
+      padding: 8px 12px;
+      border: none;
+      border-radius: 8px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    
+    .history-item .action-btn.download {
+      background: #4CAF50;
+      color: white;
+    }
+    
+    .history-item .action-btn.delete {
+      background: #f44336;
+      color: white;
+    }
+    
+    .history-item .action-btn:hover {
+      transform: translateY(-1px);
+    }
+    
+    .empty-history {
+      text-align: center;
+      padding: 40px;
+      color: #888;
+    }
+    
+    .empty-history .icon {
+      font-size: 3rem;
+      margin-bottom: 15px;
+    }
+    
+    .clear-history-btn {
+      margin-top: 20px;
+      padding: 10px 20px;
+      background: #f44336;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.3s;
+    }
+    
+    .clear-history-btn:hover {
+      background: #d32f2f;
+    }
+    
+    .history-tip {
+      background: #fff3cd;
+      color: #856404;
+      padding: 10px 15px;
+      border-radius: 8px;
+      font-size: 13px;
+      margin-bottom: 15px;
+    }
+    
+    /* 更多设置折叠区域 */
+    .more-settings {
+      margin-top: 20px;
+      border: 1px solid #e0e0e0;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    
+    .more-settings-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 15px 20px;
+      background: #f8f9fa;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    
+    .more-settings-header:hover {
+      background: #f0f0f0;
+    }
+    
+    .more-settings-header .title {
+      font-weight: 500;
+      color: #333;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .more-settings-header .arrow {
+      transition: transform 0.3s;
+      color: #666;
+    }
+    
+    .more-settings.open .more-settings-header .arrow {
+      transform: rotate(180deg);
+    }
+    
+    .more-settings-content {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+    }
+    
+    .more-settings.open .more-settings-content {
+      max-height: 600px;
+    }
+    
+    .more-settings-inner {
+      padding: 20px;
+      border-top: 1px solid #e0e0e0;
+    }
+    
+    .setting-row {
+      display: flex;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+    
+    .setting-row:last-child {
+      margin-bottom: 0;
+    }
+    
+    .setting-row label {
+      width: 100px;
+      font-size: 14px;
+      color: #555;
+      flex-shrink: 0;
+    }
+    
+    .setting-row .setting-options {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      flex: 1;
+    }
+    
+    .setting-input-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 1;
+    }
+    
+    .setting-number-input {
+      width: 80px;
+      padding: 8px 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+    
+    .setting-number-input:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+    
+    .input-suffix {
+      color: #888;
+      font-size: 13px;
+    }
+    
+    .setting-color-input {
+      width: 50px;
+      height: 36px;
+      padding: 2px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      cursor: pointer;
+      background: white;
+    }
+    
+    .setting-color-input::-webkit-color-swatch-wrapper {
+      padding: 2px;
+    }
+    
+    .setting-color-input::-webkit-color-swatch {
+      border-radius: 4px;
+      border: none;
+    }
+    
+    .color-value {
+      font-family: monospace;
+      font-size: 13px;
+      color: #666;
+    }
+    
+    .setting-option {
+      padding: 8px 16px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.2s;
+      background: white;
+    }
+    
+    .setting-option:hover {
+      border-color: #667eea;
+    }
+    
+    .setting-option.selected {
+      border-color: #667eea;
+      background: #f0f4ff;
+      color: #667eea;
+      font-weight: 500;
+    }
+    
+    .color-option {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .color-option.selected::after {
+      content: '✓';
+      color: white;
+      font-size: 14px;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+    }
+    
+    .color-option[data-color="white"] {
+      background: white;
+      border-color: #ccc;
+    }
+    
+    .color-option[data-color="white"].selected::after {
+      color: #333;
+      text-shadow: none;
+    }
+    
+    .color-option[data-color="yellow"] {
+      background: #FFD700;
+    }
+    
+    .color-option[data-color="cyan"] {
+      background: #00FFFF;
+    }
+    
+    .color-option[data-color="black"] {
+      background: #000000;
+    }
+    
+    .color-option[data-color="red"] {
+      background: #FF0000;
+    }
+    
+    .color-option[data-color="transparent"] {
+      background: linear-gradient(45deg, #ccc 25%, transparent 25%, transparent 75%, #ccc 75%), 
+                  linear-gradient(45deg, #ccc 25%, transparent 25%, transparent 75%, #ccc 75%);
+      background-size: 8px 8px;
+      background-position: 0 0, 4px 4px;
+    }
+    
+    .subtitle-preview-container {
+      margin: 20px 0;
+      text-align: center;
+    }
+    
+    .subtitle-preview-wrapper {
+      position: relative;
+      display: inline-block;
+      max-width: 100%;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+    }
+    
+    .subtitle-preview-wrapper img {
+      display: block;
+      max-width: 280px;
+      max-height: 500px;
+      object-fit: contain;
+    }
+    
+    .subtitle-preview-wrapper.landscape img {
+      max-width: 100%;
+      max-height: 300px;
+    }
+    
+    .subtitle-preview-text {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      text-align: center;
+      padding: 15px 10px;
+      font-family: "PingFang SC", -apple-system, sans-serif;
+      word-wrap: break-word;
+      pointer-events: none;
+    }
+    
+    .preview-label {
+      font-size: 13px;
+      color: #888;
+      margin-bottom: 10px;
+    }
+    
+    .subtitle-source-options {
+      margin-top: 15px;
+      padding: 15px;
+      background: #f8f9fa;
+      border-radius: 12px;
+      transition: all 0.3s;
+    }
+    
+    .subtitle-source-options.hidden {
+      display: none;
+    }
+    
+    .option-group.small {
+      gap: 10px;
+    }
+    
+    .option-item.small {
+      padding: 12px;
+    }
+    
+    .option-item.small .icon {
+      font-size: 1.5rem;
+      margin-bottom: 5px;
+    }
+    
+    .option-item.small .title {
+      font-size: 13px;
+    }
+    
+    .option-item.small .desc {
+      font-size: 11px;
+    }
+    
+    .subtitle-text-tip {
+      background: #e3f2fd;
+      color: #1565c0;
+      padding: 10px 15px;
+      border-radius: 8px;
+      font-size: 13px;
+      margin-bottom: 15px;
+    }
+    
+    .subtitle-textarea {
+      width: 100%;
+      min-height: 200px;
+      padding: 15px;
+      border: 2px solid #e0e0e0;
+      border-radius: 10px;
+      font-size: 14px;
+      font-family: inherit;
+      line-height: 1.6;
+      resize: vertical;
+      transition: border-color 0.3s;
+    }
+    
+    .subtitle-textarea:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+    
+    .subtitle-textarea::placeholder {
+      color: #aaa;
+    }
+    
+    .cropper-container {
+      margin: 20px 0;
+    }
+    
+    .cropper-wrapper {
+      max-height: 450px;
+      overflow: hidden;
+      border-radius: 12px;
+      background: #f0f0f0;
+    }
+    
+    .cropper-wrapper img {
+      display: block;
+      max-width: 100%;
+    }
+    
+    .cropper-actions {
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+      margin-top: 15px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🎬 音频转视频生成器</h1>
+      <button class="history-btn" id="historyBtn">
+        📋 历史记录 <span class="history-badge" id="historyCount">0</span>
+      </button>
+    </div>
+    
+    <div class="steps-indicator">
+      <div class="step-dot active" data-step="1">
+        <div class="number">1</div>
+        <div class="label">上传音频</div>
+      </div>
+      <div class="step-line"></div>
+      <div class="step-dot" data-step="2">
+        <div class="number">2</div>
+        <div class="label">选择视频底图</div>
+      </div>
+      <div class="step-line"></div>
+      <div class="step-dot" data-step="3">
+        <div class="number">3</div>
+        <div class="label">生成视频</div>
+      </div>
+    </div>
+    
+    <div class="card active" id="step1">
+      <h2 class="card-title"><span class="icon">🎵</span> 上传音频文件</h2>
+      
+      <p style="color: #666; margin-bottom: 15px;">选择是否需要自动生成字幕</p>
+      
+      <div class="option-group" id="subtitleOptionGroup">
+        <div class="option-item selected" data-option="with-subtitle">
+          <div class="icon">📝</div>
+          <div class="title">需要字幕</div>
+          <div class="desc">自动识别或手动输入</div>
+        </div>
+        <div class="option-item" data-option="no-subtitle">
+          <div class="icon">🎞️</div>
+          <div class="title">不需要字幕</div>
+          <div class="desc">仅图片+音频，上传更快</div>
+        </div>
+      </div>
+      
+      <!-- 字幕来源二级选项 -->
+      <div class="subtitle-source-options" id="subtitleSourceOptions">
+        <p style="color: #888; font-size: 13px; margin-bottom: 10px;">字幕来源：</p>
+        <div class="option-group small">
+          <div class="option-item small selected" data-source="asr">
+            <div class="icon">🎤</div>
+            <div class="title">识别音频</div>
+            <div class="desc">自动语音识别</div>
+          </div>
+          <div class="option-item small" data-source="manual">
+            <div class="icon">✍️</div>
+            <div class="title">我有字幕</div>
+            <div class="desc">手动输入文本</div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="upload-area" id="uploadArea">
+        <div class="icon">📁</div>
+        <p>点击上传或拖拽音频文件到此处</p>
+        <p class="hint">支持 MP3, WAV, M4A 格式</p>
+      </div>
+      <input type="file" id="audioInput" accept=".mp3,.wav,.m4a,audio/*">
+      
+      <div class="file-info" id="fileInfo">
+        <div class="filename" id="fileName"></div>
+        <div class="meta" id="fileMeta"></div>
+      </div>
+      
+      <div class="progress-container" id="uploadProgress">
+        <div class="progress-bar">
+          <div class="fill" id="uploadFill"></div>
+        </div>
+        <div class="progress-text" id="uploadText">正在上传...</div>
+      </div>
+      
+      <div class="btn-group">
+        <button class="btn btn-primary" id="nextBtn1" disabled>下一步</button>
+      </div>
+    </div>
+    
+<div class="card" id="step2">
+      <h2 class="card-title"><span class="icon">🖼️</span> 选择视频底图</h2>
+      
+      <p style="color: #666; margin-bottom: 15px;">选择底图来源</p>
+      
+      <div class="option-group" id="coverSourceGroup">
+        <div class="option-item selected" data-source="generate">
+          <div class="icon">🎨</div>
+          <div class="title">AI 生成</div>
+          <div class="desc">根据标题生成底图</div>
+        </div>
+        <div class="option-item" data-source="upload">
+          <div class="icon">📤</div>
+          <div class="title">上传图片</div>
+          <div class="desc">使用自己的图片</div>
+        </div>
+      </div>
+      
+      <div id="generateCoverSection">
+        <p style="color: #666; margin-bottom: 15px; margin-top: 20px;">选择视频比例</p>
+        
+        <div class="option-group" id="aspectRatioGroup">
+          <div class="option-item selected" data-ratio="9:16">
+            <div class="icon">📱</div>
+            <div class="title">竖屏 9:16</div>
+            <div class="desc">适合抖音、快手、小红书</div>
+          </div>
+          <div class="option-item" data-ratio="16:9">
+            <div class="icon">🖥️</div>
+            <div class="title">横屏 16:9</div>
+            <div class="desc">适合B站、YouTube</div>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label>标题（从音频文件名提取）</label>
+          <input type="text" id="coverTitle" placeholder="输入标题">
+        </div>
+        
+        <div class="form-group">
+          <label>自定义图片描述（可选，不填默认使用标题信息）</label>
+          <textarea id="customPrompt" placeholder="如需自定义，请输入详细的图片描述，例如：&#10;一个可爱的卡通女孩在咖啡店点咖啡，温馨的氛围，柔和的色彩..."></textarea>
+        </div>
+        
+        <div class="progress-container" id="coverProgress">
+          <div class="progress-bar">
+            <div class="fill" style="width: 100%"></div>
+          </div>
+          <div class="progress-text" id="coverText">正在生成底图...</div>
+        </div>
+        
+        <div class="preview-area" id="coverPreview">
+          <img id="coverImage" src="" alt="封面预览">
+        </div>
+        
+        <div class="btn-group">
+          <button class="btn btn-secondary" id="backBtn2">上一步</button>
+          <button class="btn btn-primary" id="generateCoverBtn">生成底图</button>
+          <button class="btn btn-primary" id="nextBtn2" disabled style="display:none;">下一步</button>
+        </div>
+      </div>
+      
+      <div id="uploadCoverSection" style="display: none;">
+        <p style="color: #666; margin-bottom: 15px; margin-top: 20px;">选择视频比例（用于裁剪）</p>
+        
+        <div class="option-group" id="cropRatioGroup">
+          <div class="option-item selected" data-ratio="9:16">
+            <div class="icon">📱</div>
+            <div class="title">竖屏 9:16</div>
+            <div class="desc">适合抖音、快手、小红书</div>
+          </div>
+          <div class="option-item" data-ratio="16:9">
+            <div class="icon">🖥️</div>
+            <div class="title">横屏 16:9</div>
+            <div class="desc">适合B站、YouTube</div>
+          </div>
+        </div>
+        
+        <div class="upload-area" id="imageUploadArea">
+          <div class="icon">🖼️</div>
+          <p>点击上传或拖拽图片到此处</p>
+          <p class="hint">支持 JPG, PNG, WebP 格式</p>
+        </div>
+        <input type="file" id="imageInput" accept="image/*" style="display:none;">
+        
+        <div class="cropper-container" id="cropperContainer" style="display: none;">
+          <div class="cropper-wrapper">
+            <img id="cropperImage" src="" alt="裁剪预览">
+          </div>
+          <div class="cropper-actions">
+            <button class="btn btn-secondary" id="cancelCropBtn">重新选择</button>
+            <button class="btn btn-primary" id="confirmCropBtn">确认裁剪</button>
+          </div>
+        </div>
+        
+        <div class="preview-area" id="uploadedCoverPreview" style="display: none;">
+          <img id="uploadedCoverImage" src="" alt="上传的底图">
+          <button class="btn btn-secondary" id="recropBtn" style="margin-top: 15px;">🔄 重新选择图片</button>
+        </div>
+        
+        <div class="btn-group">
+          <button class="btn btn-secondary" id="backBtn2Upload">上一步</button>
+          <button class="btn btn-primary" id="nextBtn2Upload" disabled>下一步</button>
+        </div>
+      </div>
+    </div>
+    
+    <div class="card" id="step3">
+      <h2 class="card-title"><span class="icon">🎬</span> 生成视频</h2>
+      
+      <div class="subtitle-preview-container" id="subtitlePreviewContainer">
+        <div class="preview-label">👁️ 字幕效果预览</div>
+        <div class="subtitle-preview-wrapper" id="subtitlePreviewWrapper">
+          <img id="subtitlePreviewImg" src="" alt="预览">
+          <div class="subtitle-preview-text" id="subtitlePreviewText">示例字幕文字 Sample Text</div>
+        </div>
+      </div>
+      
+      <!-- 更多设置 -->
+      <div class="more-settings" id="moreSettings">
+        <div class="more-settings-header" id="moreSettingsToggle">
+          <span class="title">⚙️ 字幕样式设置</span>
+          <span class="arrow">▼</span>
+        </div>
+        <div class="more-settings-content">
+          <div class="more-settings-inner">
+            <div class="setting-row">
+              <label>字体大小</label>
+              <div class="setting-input-group">
+                <input type="number" id="fontSizeInput" value="24" min="12" max="72" class="setting-number-input">
+                <span class="input-suffix">px</span>
+              </div>
+            </div>
+            
+            <div class="setting-row">
+              <label>字体颜色</label>
+              <div class="setting-input-group">
+                <input type="color" id="fontColorInput" value="#FFFFFF" class="setting-color-input">
+                <span class="color-value" id="fontColorValue">#FFFFFF</span>
+              </div>
+            </div>
+            
+            <div class="setting-row">
+              <label>描边颜色</label>
+              <div class="setting-input-group">
+                <input type="color" id="outlineColorInput" value="#000000" class="setting-color-input">
+                <span class="color-value" id="outlineColorValue">#000000</span>
+              </div>
+            </div>
+            
+            <div class="setting-row">
+              <label>描边宽度</label>
+              <div class="setting-input-group">
+                <input type="number" id="outlineWidthInput" value="2" min="0" max="10" class="setting-number-input">
+                <span class="input-suffix">px</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="progress-container" id="videoProgress">
+        <div class="progress-bar">
+          <div class="fill" style="width: 100%"></div>
+        </div>
+        <div class="progress-text" id="videoText">正在生成视频...</div>
+      </div>
+      
+      <div class="preview-area" id="videoPreview" style="display:none;">
+        <video id="videoPlayer" controls></video>
+      </div>
+      
+      <div class="btn-group">
+        <button class="btn btn-secondary" id="backBtn3">上一步</button>
+        <button class="btn btn-primary" id="generateVideoBtn">生成视频</button>
+      </div>
+      
+      <div class="success-message" id="successMessage" style="display:none;">
+        <div class="icon">🎉</div>
+        <h3>视频生成完成！</h3>
+        <p id="outputFilename"></p>
+        <a class="download-btn" id="downloadBtn" href="#" download>
+          ⬇️ 下载视频
+        </a>
+        <button class="new-task-btn" id="newTaskBtn">
+          ➕ 继续制作新视频
+        </button>
+      </div>
+    </div>
+  </div>
+  
+  <div class="modal-overlay" id="historyModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>📋 历史记录</h2>
+        <button class="modal-close" id="closeModal">&times;</button>
+      </div>
+      <div class="history-tip">💡 数据存储在浏览器本地，清空浏览器数据将导致记录丢失</div>
+      <div class="history-list" id="historyList"></div>
+      <button class="clear-history-btn" id="clearHistoryBtn" style="display:none;">
+        🗑️ 清空所有记录
+      </button>
+    </div>
+  </div>
+  
+  <div class="modal-overlay" id="subtitleTextModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>✍️ 输入字幕文本</h2>
+        <button class="modal-close" id="closeSubtitleModal">&times;</button>
+      </div>
+      <div class="subtitle-text-tip">
+        💡 每行一句字幕，系统会自动匹配音频时间轴
+      </div>
+      <textarea id="subtitleTextInput" class="subtitle-textarea" placeholder="在这里输入字幕文本，每行一句...&#10;&#10;例如：&#10;Hello, how are you?&#10;I'm fine, thank you.&#10;What's your name?"></textarea>
+      <div class="btn-group" style="justify-content: flex-end;">
+        <button class="btn btn-secondary" id="cancelSubtitleText">取消</button>
+        <button class="btn btn-primary" id="confirmSubtitleText">确认</button>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    const STORAGE_KEY = 'audio-to-video-history'
+    
+    const state = {
+      currentStep: 1,
+      audioFile: null,
+      audioPath: '',
+      originalFilename: '',
+      title: '',
+      aspectRatio: '9:16',
+      coverPath: '',
+      coverSource: 'generate',
+      cropper: null,
+      srtPath: '',
+      videoPath: '',
+      withSubtitles: true,
+      subtitleSource: 'asr',
+      manualSubtitleText: '',
+      duration: 0,
+      subtitleStyle: {
+        fontSize: '24',
+        fontColor: '#FFFFFF',
+        outlineColor: '#000000',
+        outlineWidth: '2'
+      }
+    }
+    
+    const elements = {
+      uploadArea: document.getElementById('uploadArea'),
+      audioInput: document.getElementById('audioInput'),
+      fileInfo: document.getElementById('fileInfo'),
+      fileName: document.getElementById('fileName'),
+      fileMeta: document.getElementById('fileMeta'),
+      uploadProgress: document.getElementById('uploadProgress'),
+      uploadFill: document.getElementById('uploadFill'),
+      uploadText: document.getElementById('uploadText'),
+      nextBtn1: document.getElementById('nextBtn1'),
+      
+      coverTitle: document.getElementById('coverTitle'),
+      customPrompt: document.getElementById('customPrompt'),
+      coverProgress: document.getElementById('coverProgress'),
+      coverText: document.getElementById('coverText'),
+      coverPreview: document.getElementById('coverPreview'),
+      coverImage: document.getElementById('coverImage'),
+      generateCoverBtn: document.getElementById('generateCoverBtn'),
+      nextBtn2: document.getElementById('nextBtn2'),
+      backBtn2: document.getElementById('backBtn2'),
+      
+      videoProgress: document.getElementById('videoProgress'),
+      videoText: document.getElementById('videoText'),
+      videoPreview: document.getElementById('videoPreview'),
+      videoPlayer: document.getElementById('videoPlayer'),
+      generateVideoBtn: document.getElementById('generateVideoBtn'),
+      backBtn3: document.getElementById('backBtn3'),
+      successMessage: document.getElementById('successMessage'),
+      downloadBtn: document.getElementById('downloadBtn'),
+      outputFilename: document.getElementById('outputFilename'),
+      newTaskBtn: document.getElementById('newTaskBtn'),
+      
+      historyBtn: document.getElementById('historyBtn'),
+      historyCount: document.getElementById('historyCount'),
+      historyModal: document.getElementById('historyModal'),
+      closeModal: document.getElementById('closeModal'),
+      historyList: document.getElementById('historyList'),
+      clearHistoryBtn: document.getElementById('clearHistoryBtn')
+    }
+    
+    function loadHistory() {
+      try {
+        return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
+      } catch {
+        return []
+      }
+    }
+    
+    function saveHistory(history) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(history))
+      updateHistoryCount()
+    }
+    
+    function addToHistory(item) {
+      const history = loadHistory()
+      history.unshift({
+        id: Date.now(),
+        ...item,
+        createdAt: new Date().toISOString()
+      })
+      if (history.length > 50) history.pop()
+      saveHistory(history)
+    }
+    
+    function removeFromHistory(id) {
+      const history = loadHistory().filter(item => item.id !== id)
+      saveHistory(history)
+      renderHistoryList()
+    }
+    
+    function clearHistory() {
+      if (confirm('确定要清空所有历史记录吗？')) {
+        saveHistory([])
+        renderHistoryList()
+      }
+    }
+    
+    function updateHistoryCount() {
+      const count = loadHistory().length
+      elements.historyCount.textContent = count
+    }
+    
+    function renderHistoryList() {
+      const history = loadHistory()
+      
+      if (history.length === 0) {
+        elements.historyList.innerHTML = `
+          <div class="empty-history">
+            <div class="icon">📭</div>
+            <p>暂无历史记录</p>
+          </div>
+        `
+        elements.clearHistoryBtn.style.display = 'none'
+        return
+      }
+      
+      elements.clearHistoryBtn.style.display = 'block'
+      elements.historyList.innerHTML = history.map(item => `
+        <div class="history-item" data-id="${item.id}">
+          <img class="thumbnail" src="${item.coverPath}" alt="封面">
+          <div class="info">
+            <div class="title">${item.title}</div>
+            <div class="meta">
+              ${formatDate(item.createdAt)} · ${item.withSubtitles ? '带字幕' : '无字幕'}
+            </div>
+          </div>
+          <div class="actions">
+            <a class="action-btn download" href="${item.videoPath}" download="${item.downloadFilename}">下载</a>
+            <button class="action-btn delete" onclick="removeFromHistory(${item.id})">删除</button>
+          </div>
+        </div>
+      `).join('')
+    }
+    
+    function formatDate(isoString) {
+      const date = new Date(isoString)
+      return `${date.getMonth() + 1}/${date.getDate()} ${date.getHours()}:${date.getMinutes().toString().padStart(2, '0')}`
+    }
+    
+    function goToStep(step) {
+      state.currentStep = step
+      
+      document.querySelectorAll('.step-dot').forEach((dot, index) => {
+        const dotStep = index + 1
+        dot.classList.remove('active', 'completed')
+        if (dotStep < step) {
+          dot.classList.add('completed')
+        } else if (dotStep === step) {
+          dot.classList.add('active')
+        }
+      })
+      
+      document.querySelectorAll('.card').forEach((card, index) => {
+        card.classList.remove('active')
+        if (index + 1 === step) {
+          card.classList.add('active')
+        }
+      })
+    }
+    
+    function resetState() {
+      state.currentStep = 1
+      state.audioFile = null
+      state.audioPath = ''
+      state.originalFilename = ''
+      state.title = ''
+      state.aspectRatio = '9:16'
+      state.coverPath = ''
+      state.coverSource = 'generate'
+      if (state.cropper) {
+        state.cropper.destroy()
+        state.cropper = null
+      }
+      state.srtPath = ''
+      state.videoPath = ''
+      state.withSubtitles = true
+      state.subtitleSource = 'asr'
+      state.manualSubtitleText = ''
+      state.duration = 0
+      state.subtitleStyle = {
+        fontSize: '24',
+        fontColor: '#FFFFFF',
+        outlineColor: '#000000',
+        outlineWidth: '2'
+      }
+      
+      elements.fileInfo.classList.remove('show')
+      elements.uploadProgress.classList.remove('show')
+      elements.uploadFill.style.width = '0%'
+      elements.uploadFill.style.background = ''
+      elements.nextBtn1.disabled = true
+      
+      elements.coverTitle.value = ''
+      elements.customPrompt.value = ''
+      elements.coverProgress.classList.remove('show')
+      elements.coverPreview.style.display = 'none'
+      elements.generateCoverBtn.textContent = '生成底图'
+      elements.generateCoverBtn.disabled = false
+      elements.nextBtn2.style.display = 'none'
+      elements.nextBtn2.disabled = true
+      
+      // 重置底图来源选择
+      document.querySelectorAll('#coverSourceGroup .option-item').forEach(item => {
+        item.classList.remove('selected')
+        if (item.dataset.source === 'generate') {
+          item.classList.add('selected')
+        }
+      })
+      document.getElementById('generateCoverSection').style.display = 'block'
+      document.getElementById('uploadCoverSection').style.display = 'none'
+      document.getElementById('cropperContainer').style.display = 'none'
+      document.getElementById('uploadedCoverPreview').style.display = 'none'
+      document.getElementById('imageUploadArea').style.display = 'block'
+      document.getElementById('nextBtn2Upload').disabled = true
+      
+      // 重置比例选择
+      document.querySelectorAll('#aspectRatioGroup .option-item').forEach(item => {
+        item.classList.remove('selected')
+        if (item.dataset.ratio === '9:16') {
+          item.classList.add('selected')
+        }
+      })
+      
+      elements.videoProgress.classList.remove('show')
+      elements.videoPreview.style.display = 'none'
+      elements.successMessage.style.display = 'none'
+      elements.generateVideoBtn.textContent = '生成视频'
+      elements.generateVideoBtn.disabled = false
+      
+      document.querySelectorAll('#subtitleOptionGroup .option-item').forEach(item => {
+        item.classList.remove('selected')
+        if (item.dataset.option === 'with-subtitle') {
+          item.classList.add('selected')
+        }
+      })
+      
+      document.querySelectorAll('#subtitleSourceOptions .option-item').forEach(item => {
+        item.classList.remove('selected')
+        if (item.dataset.source === 'asr') {
+          item.classList.add('selected')
+        }
+      })
+      document.getElementById('subtitleSourceOptions').classList.remove('hidden')
+      document.getElementById('subtitleTextInput').value = ''
+      
+      // 重置字幕样式设置
+      document.getElementById('moreSettings').classList.remove('open')
+      resetSubtitleStyleOptions()
+      
+      goToStep(1)
+    }
+    
+    function resetSubtitleStyleOptions() {
+      document.getElementById('fontSizeInput').value = '24'
+      document.getElementById('fontColorInput').value = '#FFFFFF'
+      document.getElementById('fontColorValue').textContent = '#FFFFFF'
+      document.getElementById('outlineColorInput').value = '#000000'
+      document.getElementById('outlineColorValue').textContent = '#000000'
+      document.getElementById('outlineWidthInput').value = '2'
+    }
+    
+    elements.uploadArea.addEventListener('click', () => {
+      elements.audioInput.click()
+    })
+    
+    elements.uploadArea.addEventListener('dragover', (e) => {
+      e.preventDefault()
+      elements.uploadArea.classList.add('dragover')
+    })
+    
+    elements.uploadArea.addEventListener('dragleave', () => {
+      elements.uploadArea.classList.remove('dragover')
+    })
+    
+    elements.uploadArea.addEventListener('drop', (e) => {
+      e.preventDefault()
+      elements.uploadArea.classList.remove('dragover')
+      const files = e.dataTransfer.files
+      if (files.length > 0) {
+        handleFileSelect(files[0])
+      }
+    })
+    
+    elements.audioInput.addEventListener('change', (e) => {
+      if (e.target.files.length > 0) {
+        handleFileSelect(e.target.files[0])
+      }
+    })
+    
+    async function handleFileSelect(file) {
+      state.audioFile = file
+      state.originalFilename = file.name
+      
+      elements.uploadProgress.classList.add('show')
+      elements.uploadFill.style.width = '30%'
+      elements.uploadText.textContent = '正在上传...'
+      
+      const formData = new FormData()
+      formData.append('audio', file)
+      
+      try {
+        const response = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData
+        })
+        
+        const data = await response.json()
+        if (!data.success) throw new Error(data.error)
+        
+        state.audioPath = data.file.path
+        state.title = data.file.title
+        
+        // 根据字幕设置决定处理方式
+        if (state.withSubtitles && state.subtitleSource === 'asr') {
+          // 使用 ASR 识别
+          elements.uploadFill.style.width = '60%'
+          elements.uploadText.textContent = '正在识别语音...'
+          
+          const asrResponse = await fetch('/api/asr', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ audioPath: data.file.path })
+          })
+          
+          elements.uploadFill.style.width = '100%'
+          
+          const asrData = await asrResponse.json()
+          if (!asrData.success) throw new Error(asrData.error)
+          
+          state.srtPath = asrData.srtPath
+          state.duration = asrData.duration
+          
+          elements.fileInfo.classList.add('show')
+          elements.fileName.textContent = file.name
+          elements.fileMeta.textContent = `时长: ${formatDuration(asrData.duration)} | 字幕: ${asrData.utterances.length} 条`
+          
+        } else if (state.withSubtitles && state.subtitleSource === 'manual') {
+          // 使用手动输入的字幕文本，需要进行强制对齐
+          if (!state.manualSubtitleText) {
+            throw new Error('请先输入字幕文本')
+          }
+          
+          elements.uploadFill.style.width = '60%'
+          elements.uploadText.textContent = '正在对齐字幕...'
+          
+          const alignResponse = await fetch('/api/align-subtitle', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              audioPath: data.file.path,
+              subtitleText: state.manualSubtitleText
+            })
+          })
+          
+          elements.uploadFill.style.width = '100%'
+          
+          const alignData = await alignResponse.json()
+          if (!alignData.success) throw new Error(alignData.error)
+          
+          state.srtPath = alignData.srtPath
+          state.duration = alignData.duration
+          
+          elements.fileInfo.classList.add('show')
+          elements.fileName.textContent = file.name
+          elements.fileMeta.textContent = `时长: ${formatDuration(alignData.duration)} | 字幕: ${alignData.lineCount} 条（手动输入）`
+          
+        } else {
+          // 不需要字幕，跳过 ASR
+          elements.uploadFill.style.width = '100%'
+          state.srtPath = ''
+          state.duration = 0
+          
+          elements.fileInfo.classList.add('show')
+          elements.fileName.textContent = file.name
+          elements.fileMeta.textContent = '无字幕模式'
+        }
+        
+        elements.uploadText.textContent = '上传完成！'
+        elements.nextBtn1.disabled = false
+        
+        elements.coverTitle.value = state.title
+        
+      } catch (error) {
+        elements.uploadText.textContent = '上传失败: ' + error.message
+        elements.uploadFill.style.background = '#f44336'
+      }
+    }
+    
+    function formatDuration(ms) {
+      const minutes = Math.floor(ms / 60000)
+      const seconds = Math.floor((ms % 60000) / 1000)
+      return `${minutes}:${seconds.toString().padStart(2, '0')}`
+    }
+    
+    elements.nextBtn1.addEventListener('click', () => goToStep(2))
+    
+    elements.backBtn2.addEventListener('click', () => goToStep(1))
+    
+    // 步骤1: 字幕选项事件
+    document.querySelectorAll('#subtitleOptionGroup .option-item').forEach(item => {
+      item.addEventListener('click', () => {
+        document.querySelectorAll('#subtitleOptionGroup .option-item').forEach(i => i.classList.remove('selected'))
+        item.classList.add('selected')
+        state.withSubtitles = item.dataset.option === 'with-subtitle'
+        
+        const sourceOptions = document.getElementById('subtitleSourceOptions')
+        if (state.withSubtitles) {
+          sourceOptions.classList.remove('hidden')
+        } else {
+          sourceOptions.classList.add('hidden')
+        }
+      })
+    })
+    
+    // 字幕来源二级选项事件
+    document.querySelectorAll('#subtitleSourceOptions .option-item').forEach(item => {
+      item.addEventListener('click', () => {
+        document.querySelectorAll('#subtitleSourceOptions .option-item').forEach(i => i.classList.remove('selected'))
+        item.classList.add('selected')
+        state.subtitleSource = item.dataset.source
+        
+        if (state.subtitleSource === 'manual') {
+          document.getElementById('subtitleTextModal').classList.add('show')
+        }
+      })
+    })
+    
+    // 字幕文本弹窗事件
+    document.getElementById('closeSubtitleModal').addEventListener('click', () => {
+      document.getElementById('subtitleTextModal').classList.remove('show')
+    })
+    
+    document.getElementById('cancelSubtitleText').addEventListener('click', () => {
+      document.getElementById('subtitleTextModal').classList.remove('show')
+      if (!state.manualSubtitleText) {
+        document.querySelectorAll('#subtitleSourceOptions .option-item').forEach(i => {
+          i.classList.remove('selected')
+          if (i.dataset.source === 'asr') i.classList.add('selected')
+        })
+        state.subtitleSource = 'asr'
+      }
+    })
+    
+    document.getElementById('confirmSubtitleText').addEventListener('click', () => {
+      const text = document.getElementById('subtitleTextInput').value.trim()
+      if (!text) {
+        alert('请输入字幕文本')
+        return
+      }
+      state.manualSubtitleText = text
+      document.getElementById('subtitleTextModal').classList.remove('show')
+    })
+    
+    document.getElementById('subtitleTextModal').addEventListener('click', (e) => {
+      if (e.target.id === 'subtitleTextModal') {
+        document.getElementById('subtitleTextModal').classList.remove('show')
+      }
+    })
+    
+    // 比例选择事件
+    document.querySelectorAll('#aspectRatioGroup .option-item').forEach(item => {
+      item.addEventListener('click', () => {
+        document.querySelectorAll('#aspectRatioGroup .option-item').forEach(i => i.classList.remove('selected'))
+        item.classList.add('selected')
+        state.aspectRatio = item.dataset.ratio
+      })
+    })
+    
+    // 底图来源选择事件
+    document.querySelectorAll('#coverSourceGroup .option-item').forEach(item => {
+      item.addEventListener('click', () => {
+        document.querySelectorAll('#coverSourceGroup .option-item').forEach(i => i.classList.remove('selected'))
+        item.classList.add('selected')
+        state.coverSource = item.dataset.source
+        
+        if (state.coverSource === 'generate') {
+          document.getElementById('generateCoverSection').style.display = 'block'
+          document.getElementById('uploadCoverSection').style.display = 'none'
+        } else {
+          document.getElementById('generateCoverSection').style.display = 'none'
+          document.getElementById('uploadCoverSection').style.display = 'block'
+        }
+      })
+    })
+    
+    // 裁剪比例选择事件
+    document.querySelectorAll('#cropRatioGroup .option-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const previousRatio = state.aspectRatio
+        document.querySelectorAll('#cropRatioGroup .option-item').forEach(i => i.classList.remove('selected'))
+        item.classList.add('selected')
+        state.aspectRatio = item.dataset.ratio
+        
+        // 如果裁剪器正在工作，更新比例
+        if (state.cropper) {
+          const ratio = state.aspectRatio === '9:16' ? 9/16 : 16/9
+          state.cropper.setAspectRatio(ratio)
+        }
+        
+        // 如果已经裁剪完成（有预览图显示），且比例发生变化，需要重新裁剪
+        const uploadedPreview = document.getElementById('uploadedCoverPreview')
+        if (uploadedPreview.style.display === 'block' && previousRatio !== state.aspectRatio) {
+          // 重置状态，让用户重新上传
+          document.getElementById('uploadedCoverPreview').style.display = 'none'
+          document.getElementById('imageUploadArea').style.display = 'block'
+          document.getElementById('nextBtn2Upload').disabled = true
+          document.getElementById('imageInput').value = ''
+          state.coverPath = ''
+        }
+      })
+    })
+    
+    // 图片上传区域事件
+    const imageUploadArea = document.getElementById('imageUploadArea')
+    const imageInput = document.getElementById('imageInput')
+    
+    imageUploadArea.addEventListener('click', () => imageInput.click())
+    
+    imageUploadArea.addEventListener('dragover', (e) => {
+      e.preventDefault()
+      imageUploadArea.classList.add('dragover')
+    })
+    
+    imageUploadArea.addEventListener('dragleave', () => {
+      imageUploadArea.classList.remove('dragover')
+    })
+    
+    imageUploadArea.addEventListener('drop', (e) => {
+      e.preventDefault()
+      imageUploadArea.classList.remove('dragover')
+      if (e.dataTransfer.files.length > 0) {
+        handleImageSelect(e.dataTransfer.files[0])
+      }
+    })
+    
+    imageInput.addEventListener('change', (e) => {
+      if (e.target.files.length > 0) {
+        handleImageSelect(e.target.files[0])
+      }
+    })
+    
+    function handleImageSelect(file) {
+      if (!file.type.startsWith('image/')) {
+        alert('请选择图片文件')
+        return
+      }
+      
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const cropperImage = document.getElementById('cropperImage')
+        cropperImage.src = e.target.result
+        
+        document.getElementById('imageUploadArea').style.display = 'none'
+        document.getElementById('cropperContainer').style.display = 'block'
+        
+        if (state.cropper) {
+          state.cropper.destroy()
+        }
+        
+        const ratio = state.aspectRatio === '9:16' ? 9/16 : 16/9
+        state.cropper = new Cropper(cropperImage, {
+          aspectRatio: ratio,
+          viewMode: 1,
+          dragMode: 'move',
+          autoCropArea: 0.9,
+          restore: false,
+          guides: true,
+          center: true,
+          highlight: false,
+          cropBoxMovable: true,
+          cropBoxResizable: true,
+          toggleDragModeOnDblclick: false,
+        })
+      }
+      reader.readAsDataURL(file)
+    }
+    
+    // 取消裁剪
+    document.getElementById('cancelCropBtn').addEventListener('click', () => {
+      if (state.cropper) {
+        state.cropper.destroy()
+        state.cropper = null
+      }
+      document.getElementById('cropperContainer').style.display = 'none'
+      document.getElementById('imageUploadArea').style.display = 'block'
+      document.getElementById('imageInput').value = ''
+    })
+    
+    // 确认裁剪
+    document.getElementById('confirmCropBtn').addEventListener('click', async () => {
+      if (!state.cropper) return
+      
+      const canvas = state.cropper.getCroppedCanvas({
+        width: state.aspectRatio === '9:16' ? 1080 : 1920,
+        height: state.aspectRatio === '9:16' ? 1920 : 1080,
+        imageSmoothingEnabled: true,
+        imageSmoothingQuality: 'high',
+      })
+      
+      canvas.toBlob(async (blob) => {
+        const formData = new FormData()
+        formData.append('image', blob, 'cropped.jpg')
+        
+        try {
+          const response = await fetch('/api/upload-cover', {
+            method: 'POST',
+            body: formData
+          })
+          
+          const data = await response.json()
+          if (!data.success) throw new Error(data.error)
+          
+          state.coverPath = data.imagePath
+          
+          document.getElementById('cropperContainer').style.display = 'none'
+          document.getElementById('uploadedCoverPreview').style.display = 'block'
+          document.getElementById('uploadedCoverImage').src = data.imagePath
+          document.getElementById('nextBtn2Upload').disabled = false
+          
+          if (state.cropper) {
+            state.cropper.destroy()
+            state.cropper = null
+          }
+        } catch (error) {
+          alert('上传失败: ' + error.message)
+        }
+      }, 'image/jpeg', 0.92)
+    })
+    
+    // 上传底图的下一步按钮
+    document.getElementById('nextBtn2Upload').addEventListener('click', () => {
+      goToStep(3)
+      document.getElementById('moreSettings').style.display = state.withSubtitles ? 'block' : 'none'
+      document.getElementById('subtitlePreviewContainer').style.display = state.withSubtitles ? 'block' : 'none'
+      if (state.withSubtitles) {
+        initSubtitlePreview()
+      }
+    })
+    
+    // 上传底图的上一步按钮
+    document.getElementById('backBtn2Upload').addEventListener('click', () => goToStep(1))
+    
+    // 重新选择图片按钮
+    document.getElementById('recropBtn').addEventListener('click', () => {
+      document.getElementById('uploadedCoverPreview').style.display = 'none'
+      document.getElementById('imageUploadArea').style.display = 'block'
+      document.getElementById('nextBtn2Upload').disabled = true
+      document.getElementById('imageInput').value = ''
+      state.coverPath = ''
+    })
+    
+    elements.generateCoverBtn.addEventListener('click', async () => {
+      const title = elements.coverTitle.value || state.title
+      const customPrompt = elements.customPrompt.value
+      const aspectRatio = state.aspectRatio
+      
+      elements.coverProgress.classList.add('show')
+      elements.coverPreview.style.display = 'none'
+      elements.coverText.textContent = '正在生成底图...'
+      elements.generateCoverBtn.disabled = true
+      
+      try {
+        const response = await fetch('/api/generate-cover', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title, customPrompt, aspectRatio })
+        })
+        
+        const data = await response.json()
+        if (!data.success) throw new Error(data.error)
+        
+        state.coverPath = data.imagePath
+        
+        elements.coverImage.src = data.imagePath
+        elements.coverPreview.style.display = 'block'
+        elements.coverText.textContent = '底图生成完成！'
+        
+        elements.generateCoverBtn.textContent = '重新生成'
+        elements.generateCoverBtn.disabled = false
+        elements.nextBtn2.style.display = 'inline-block'
+        elements.nextBtn2.disabled = false
+        
+      } catch (error) {
+        elements.coverText.textContent = '生成失败: ' + error.message
+        elements.generateCoverBtn.disabled = false
+      }
+    })
+    
+    elements.nextBtn2.addEventListener('click', () => {
+      goToStep(3)
+      // 根据字幕状态显示/隐藏相关元素
+      document.getElementById('moreSettings').style.display = state.withSubtitles ? 'block' : 'none'
+      document.getElementById('subtitlePreviewContainer').style.display = state.withSubtitles ? 'block' : 'none'
+      if (state.withSubtitles) {
+        initSubtitlePreview()
+      }
+    })
+    
+    elements.backBtn3.addEventListener('click', () => goToStep(2))
+    
+    // 更多设置折叠
+    document.getElementById('moreSettingsToggle').addEventListener('click', () => {
+      document.getElementById('moreSettings').classList.toggle('open')
+    })
+    
+    // 更新字幕预览
+    function updateSubtitlePreview() {
+      const previewText = document.getElementById('subtitlePreviewText')
+      const previewImg = document.getElementById('subtitlePreviewImg')
+      const fontSize = parseInt(state.subtitleStyle.fontSize)
+      const fontColor = state.subtitleStyle.fontColor
+      const outlineColor = state.subtitleStyle.outlineColor
+      const outlineWidth = parseInt(state.subtitleStyle.outlineWidth)
+      
+      // 根据预览图实际尺寸计算缩放比例
+      // 实际视频尺寸：竖屏 1080x1920, 横屏 1920x1080
+      const videoWidth = state.aspectRatio === '9:16' ? 1080 : 1920
+      const previewWidth = previewImg.offsetWidth || (state.aspectRatio === '9:16' ? 280 : 500)
+      const scale = previewWidth / videoWidth
+      
+      const scaledFontSize = Math.max(8, Math.round(fontSize * scale))
+      const scaledOutline = Math.max(1, Math.round(outlineWidth * scale))
+      const marginBottom = state.aspectRatio === '9:16' ? '5%' : '4%'
+      
+      let textShadow = ''
+      if (outlineWidth > 0) {
+        textShadow = `
+          -${scaledOutline}px -${scaledOutline}px 0 ${outlineColor},
+          ${scaledOutline}px -${scaledOutline}px 0 ${outlineColor},
+          -${scaledOutline}px ${scaledOutline}px 0 ${outlineColor},
+          ${scaledOutline}px ${scaledOutline}px 0 ${outlineColor}
+        `
+      }
+      
+      previewText.style.fontSize = `${scaledFontSize}px`
+      previewText.style.color = fontColor
+      previewText.style.textShadow = textShadow || 'none'
+      previewText.style.paddingBottom = marginBottom
+    }
+    
+    // 初始化预览图
+    function initSubtitlePreview() {
+      const previewImg = document.getElementById('subtitlePreviewImg')
+      const previewWrapper = document.getElementById('subtitlePreviewWrapper')
+      
+      if (state.coverPath) {
+        previewImg.src = state.coverPath
+        previewWrapper.classList.toggle('landscape', state.aspectRatio === '16:9')
+        
+        // 等待图片加载完成后再更新预览，确保能获取正确的尺寸
+        previewImg.onload = () => {
+          updateSubtitlePreview()
+        }
+        // 如果图片已缓存，直接更新
+        if (previewImg.complete) {
+          updateSubtitlePreview()
+        }
+      }
+    }
+    
+    // 字幕样式输入事件
+    document.getElementById('fontSizeInput').addEventListener('input', (e) => {
+      state.subtitleStyle.fontSize = e.target.value
+      updateSubtitlePreview()
+    })
+    
+    document.getElementById('fontColorInput').addEventListener('input', (e) => {
+      state.subtitleStyle.fontColor = e.target.value
+      document.getElementById('fontColorValue').textContent = e.target.value.toUpperCase()
+      updateSubtitlePreview()
+    })
+    
+    document.getElementById('outlineColorInput').addEventListener('input', (e) => {
+      state.subtitleStyle.outlineColor = e.target.value
+      document.getElementById('outlineColorValue').textContent = e.target.value.toUpperCase()
+      updateSubtitlePreview()
+    })
+    
+    document.getElementById('outlineWidthInput').addEventListener('input', (e) => {
+      state.subtitleStyle.outlineWidth = e.target.value
+      updateSubtitlePreview()
+    })
+    
+    elements.generateVideoBtn.addEventListener('click', async () => {
+      elements.videoProgress.classList.add('show')
+      elements.videoPreview.style.display = 'none'
+      elements.successMessage.style.display = 'none'
+      elements.videoText.textContent = '正在生成视频...'
+      elements.generateVideoBtn.disabled = true
+      
+      try {
+        const response = await fetch('/api/generate-video', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            audioPath: state.audioPath,
+            imagePath: state.coverPath,
+            srtPath: state.srtPath,
+            withSubtitles: state.withSubtitles,
+            originalFilename: state.originalFilename,
+            aspectRatio: state.aspectRatio,
+            subtitleStyle: state.subtitleStyle
+          })
+        })
+        
+        const data = await response.json()
+        if (!data.success) throw new Error(data.error)
+        
+        state.videoPath = data.videoPath
+        
+        elements.videoPlayer.src = data.videoPath
+        elements.videoPreview.style.display = 'block'
+        elements.videoProgress.classList.remove('show')
+        
+        elements.downloadBtn.href = data.videoPath
+        elements.downloadBtn.download = data.downloadFilename
+        elements.outputFilename.textContent = `文件名：${data.downloadFilename}`
+        elements.successMessage.style.display = 'block'
+        
+        elements.generateVideoBtn.textContent = '重新生成'
+        elements.generateVideoBtn.disabled = false
+        
+        addToHistory({
+          title: state.title || state.originalFilename,
+          originalFilename: state.originalFilename,
+          coverPath: state.coverPath,
+          videoPath: data.videoPath,
+          downloadFilename: data.downloadFilename,
+          withSubtitles: state.withSubtitles,
+          duration: state.duration
+        })
+        
+      } catch (error) {
+        elements.videoText.textContent = '生成失败: ' + error.message
+        elements.generateVideoBtn.disabled = false
+      }
+    })
+    
+    elements.newTaskBtn.addEventListener('click', resetState)
+    
+    elements.historyBtn.addEventListener('click', () => {
+      renderHistoryList()
+      elements.historyModal.classList.add('show')
+    })
+    
+    elements.closeModal.addEventListener('click', () => {
+      elements.historyModal.classList.remove('show')
+    })
+    
+    elements.historyModal.addEventListener('click', (e) => {
+      if (e.target === elements.historyModal) {
+        elements.historyModal.classList.remove('show')
+      }
+    })
+    
+    elements.clearHistoryBtn.addEventListener('click', clearHistory)
+    
+    window.removeFromHistory = removeFromHistory
+    
+    updateHistoryCount()
+  </script>
+  <script src="https://unpkg.com/cropperjs@1.6.2/dist/cropper.min.js"></script>
+</body>
+</html>

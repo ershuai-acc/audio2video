@@ -1,0 +1,6 @@
+node_modules/
+.piebox/
+uploads/
+outputs/
+.DS_Store
+*.log
